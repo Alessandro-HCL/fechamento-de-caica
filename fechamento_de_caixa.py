@@ -54,14 +54,77 @@
 
 
 
+# import streamlit as st
+# import pandas as pd
+# from datetime import datetime
+# import yagmail
+
+# st.title("📦 Fechamento de Caixa - Villa Sonali")
+
+# # Entradas
+# valor_pix = st.number_input("💳 Valor em PIX (R$):", min_value=0.0, step=0.01)
+# valor_dinheiro = st.number_input("💵 Valor em Dinheiro (R$):", min_value=0.0, step=0.01)
+# valor_cartao = st.number_input("💳 Valor em Cartão (R$):", min_value=0.0, step=0.01)
+# valor_pendura = st.number_input("🧾 Valor Pendura (R$):", min_value=0.0, step=0.01)
+# valor_total_vendas = st.number_input("💰 Valor Total de Vendas (com 10%) (R$):", min_value=0.0, step=0.01)
+# numero_clientes = st.number_input("👥 Número de Clientes:", min_value=1, step=1)
+
+# # Botão
+# if st.button("📥 Gerar Planilha e Enviar por E-mail"):
+#     total_entradas = round(valor_pix + valor_dinheiro + valor_cartao + valor_pendura, 2)
+#     divergente = "✅ Sem divergência" if total_entradas == round(valor_total_vendas, 2) else "❌ Divergência detectada"
+#     valor_bruto = round(valor_total_vendas / 1.10, 2)
+#     ticket_medio = round(valor_total_vendas / numero_clientes, 2)
+
+#     # Cria a planilha
+#     df = pd.DataFrame({
+#         "Tipo": [
+#             "Valor PIX", "Valor Dinheiro", "Valor Cartão", "Valor Pendura", "", 
+#             "Valor Total de Vendas (com 10%)", "Valor de Venda Bruto (sem 10%)", 
+#             "Número de Clientes", "Ticket Médio", "Verificação"
+#         ],
+#         "Valor (R$)": [
+#             valor_pix, valor_dinheiro, valor_cartao, valor_pendura, "", 
+#             valor_total_vendas, valor_bruto, numero_clientes, ticket_medio, divergente
+#         ]
+#     })
+
+#     # Salva o arquivo
+#     data_hora = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+#     nome_arquivo = f"fechamento_caixa_{data_hora}.xlsx"
+#     df.to_excel(nome_arquivo, index=False)
+
+#     # Mostra mensagem de sucesso e botão de download
+#     st.success(f"✅ Planilha gerada com sucesso: `{nome_arquivo}`")
+#     with open(nome_arquivo, "rb") as file:
+#         st.download_button("📂 Baixar Planilha", data=file, file_name=nome_arquivo,
+#                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+#     # Envia por e-mail
+#     try:
+#         yag = yagmail.SMTP(user="ale.moreira@gmail.com", password="gncuqrzzkstgeamn")
+#         yag.send(
+#             to="ale.moreira@gmail.com",
+#             subject="📋 Fechamento de Caixa - Villa Sonali",
+#             contents="Segue em anexo o fechamento de caixa do dia.",
+#             attachments=nome_arquivo
+#         )
+#         st.success("📧 E-mail enviado com sucesso!")
+#     except Exception as e:
+#         st.error(f"❌ Erro ao enviar e-mail: {e}")
+
+
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import yagmail
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
 
 st.title("📦 Fechamento de Caixa - Villa Sonali")
 
-# Entradas
+# Entradas do usuário
 valor_pix = st.number_input("💳 Valor em PIX (R$):", min_value=0.0, step=0.01)
 valor_dinheiro = st.number_input("💵 Valor em Dinheiro (R$):", min_value=0.0, step=0.01)
 valor_cartao = st.number_input("💳 Valor em Cartão (R$):", min_value=0.0, step=0.01)
@@ -69,46 +132,73 @@ valor_pendura = st.number_input("🧾 Valor Pendura (R$):", min_value=0.0, step=
 valor_total_vendas = st.number_input("💰 Valor Total de Vendas (com 10%) (R$):", min_value=0.0, step=0.01)
 numero_clientes = st.number_input("👥 Número de Clientes:", min_value=1, step=1)
 
-# Botão
-if st.button("📥 Gerar Planilha e Enviar por E-mail"):
+# Botão para gerar e enviar planilha
+if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     total_entradas = round(valor_pix + valor_dinheiro + valor_cartao + valor_pendura, 2)
     divergente = "✅ Sem divergência" if total_entradas == round(valor_total_vendas, 2) else "❌ Divergência detectada"
     valor_bruto = round(valor_total_vendas / 1.10, 2)
     ticket_medio = round(valor_total_vendas / numero_clientes, 2)
 
-    # Cria a planilha
     df = pd.DataFrame({
         "Tipo": [
-            "Valor PIX", "Valor Dinheiro", "Valor Cartão", "Valor Pendura", "", 
-            "Valor Total de Vendas (com 10%)", "Valor de Venda Bruto (sem 10%)", 
-            "Número de Clientes", "Ticket Médio", "Verificação"
+            "Valor PIX",
+            "Valor Dinheiro",
+            "Valor Cartão",
+            "Valor Pendura",
+            "",
+            "Valor Total de Vendas (com 10%)",
+            "Valor de Venda Bruto (sem 10%)",
+            "Número de Clientes",
+            "Ticket Médio",
+            "Verificação"
         ],
         "Valor (R$)": [
-            valor_pix, valor_dinheiro, valor_cartao, valor_pendura, "", 
-            valor_total_vendas, valor_bruto, numero_clientes, ticket_medio, divergente
+            valor_pix,
+            valor_dinheiro,
+            valor_cartao,
+            valor_pendura,
+            "",
+            valor_total_vendas,
+            valor_bruto,
+            numero_clientes,
+            ticket_medio,
+            divergente
         ]
     })
 
-    # Salva o arquivo
-    data_hora = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    nome_arquivo = f"fechamento_caixa_{data_hora}.xlsx"
+    nome_arquivo = f"fechamento_caixa_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     df.to_excel(nome_arquivo, index=False)
 
-    # Mostra mensagem de sucesso e botão de download
-    st.success(f"✅ Planilha gerada com sucesso: `{nome_arquivo}`")
-    with open(nome_arquivo, "rb") as file:
-        st.download_button("📂 Baixar Planilha", data=file, file_name=nome_arquivo,
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    # Formatação condicional no Excel
+    wb = load_workbook(nome_arquivo)
+    ws = wb.active
 
-    # Envia por e-mail
+    # Formatação da verificação (linha 11, coluna 2)
+    fill_verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # verde
+    fill_vermelho = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # vermelho
+
+    if divergente.startswith("✅"):
+        ws["B11"].fill = fill_verde
+    else:
+        ws["B11"].fill = fill_vermelho
+
+    # Formatação do ticket médio (linha 10, coluna 2)
+    if ticket_medio >= 100:
+        ws["B10"].fill = fill_verde
+    else:
+        ws["B10"].fill = fill_vermelho
+
+    wb.save(nome_arquivo)
+
+    # Envia o e-mail com yagmail
     try:
         yag = yagmail.SMTP(user="ale.moreira@gmail.com", password="gncuqrzzkstgeamn")
         yag.send(
             to="ale.moreira@gmail.com",
-            subject="📋 Fechamento de Caixa - Villa Sonali",
-            contents="Segue em anexo o fechamento de caixa do dia.",
+            subject="📋 Relatório - Fechamento de Caixa",
+            contents="Segue em anexo o fechamento de caixa com os detalhes do dia.",
             attachments=nome_arquivo
         )
         st.success("📧 E-mail enviado com sucesso!")
     except Exception as e:
-        st.error(f"❌ Erro ao enviar e-mail: {e}")
+        st.error(f"❌ Erro ao enviar o e-mail: {e}")
