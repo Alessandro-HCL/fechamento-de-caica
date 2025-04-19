@@ -214,8 +214,11 @@ import yagmail
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 
-# Inicializa valores
-for key in ["valor_pix", "valor_dinheiro", "valor_cartao", "valor_pendura", "valor_total_vendas", "numero_clientes"]:
+# Inicializa variáveis
+for key in [
+    "valor_pix", "valor_dinheiro", "valor_cartao", "valor_pendura",
+    "valor_total_vendas", "numero_clientes", "email_enviado"
+]:
     if key not in st.session_state:
         st.session_state[key] = 0.0 if key != "numero_clientes" else 1
 
@@ -229,7 +232,7 @@ st.session_state.valor_pendura = st.number_input("🧾 Valor Pendura (R$):", min
 st.session_state.valor_total_vendas = st.number_input("💰 Valor Total de Vendas (com 10%) (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_total_vendas)
 st.session_state.numero_clientes = st.number_input("👥 Número de Clientes:", min_value=1, step=1, value=st.session_state.numero_clientes)
 
-# Geração e envio
+# Botão
 if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     pix = st.session_state.valor_pix
     dinheiro = st.session_state.valor_dinheiro
@@ -260,39 +263,47 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     nome_arquivo = f"fechamento_caixa_{data_hora}.xlsx"
     df.to_excel(nome_arquivo, index=False)
 
-    # Cores com openpyxl
+    # Estilizar planilha com cores
     wb = load_workbook(nome_arquivo)
     ws = wb.active
 
-    vermelho = PatternFill(start_color="FF9999", end_color="FF9999", fill_type="solid")
-    verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    for row in range(2, 12):
+        tipo = ws[f"A{row}"].value
+        valor = ws[f"B{row}"].value
 
-    for i, row in enumerate(ws.iter_rows(min_row=2, max_row=11), start=2):
-        label = row[0].value
-        cell_valor = row[1]
+        if tipo == "Verificação":
+            if "❌" in str(valor):
+                ws[f"B{row}"].fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # vermelho
+            else:
+                ws[f"B{row}"].fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # verde
 
-        if label == "Verificação":
-            cell_valor.fill = verde if cell_valor.value == "✅ Sem divergência" else vermelho
-        elif label == "Ticket Médio":
-            if isinstance(cell_valor.value, (int, float)):
-                cell_valor.fill = verde if cell_valor.value >= 100 else vermelho
+        if tipo == "Ticket Médio":
+            if float(valor) < 100:
+                ws[f"B{row}"].fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # vermelho
+            else:
+                ws[f"B{row}"].fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # verde
 
     wb.save(nome_arquivo)
 
-    # Envio do e-mail
+    # Enviar e-mail
     try:
         yag = yagmail.SMTP(user="ale.moreira@gmail.com", password="gncuqrzzkstgeamn")
         yag.send(
             to="ale.moreira@gmail.com",
-            subject=f"📋 Fechamento de Caixa - {data_hora}",
-            contents="Segue em anexo a planilha de fechamento de caixa.",
+            subject=f"📋 Relatório - Fechamento de Caixa {data_hora}",
+            contents="Segue em anexo o relatório de fechamento de caixa.",
             attachments=nome_arquivo
         )
-        st.success(f"📧 E-mail enviado com sucesso com a planilha `{nome_arquivo}`!")
+        st.session_state.email_enviado = True
     except Exception as e:
-        st.error(f"Erro ao enviar e-mail: {e}")
+        st.error(f"❌ Erro ao enviar e-mail: {e}")
 
-    # Reset dos campos
+# Confirmação de envio e reinicialização
+if st.session_state.email_enviado:
+    st.success("📧 E-mail enviado com sucesso!")
+    st.session_state.email_enviado = False
+
+    # Resetar valores
     st.session_state.valor_pix = 0.0
     st.session_state.valor_dinheiro = 0.0
     st.session_state.valor_cartao = 0.0
@@ -300,4 +311,4 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     st.session_state.valor_total_vendas = 0.0
     st.session_state.numero_clientes = 1
 
-    st.rerun()
+    st.experimental_rerun()
