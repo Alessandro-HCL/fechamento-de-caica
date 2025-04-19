@@ -214,38 +214,43 @@ import yagmail
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 
-# Inicializa variáveis
-for key in [
-    "valor_pix", "valor_dinheiro", "valor_cartao", "valor_pendura",
-    "valor_total_vendas", "numero_clientes", "email_enviado"
-]:
+# Inicializa os valores no session_state se não existirem
+for key, default in {
+    "valor_pix": 0.0,
+    "valor_dinheiro": 0.0,
+    "valor_cartao": 0.0,
+    "valor_pendura": 0.0,
+    "valor_total_vendas": 0.0,
+    "numero_clientes": 1,
+    "email_enviado": False
+}.items():
     if key not in st.session_state:
-        st.session_state[key] = 0.0 if key != "numero_clientes" else 1
+        st.session_state[key] = default
 
 st.title("📦 Fechamento de Caixa - Villa Sonali")
 
-# Entradas
-st.session_state.valor_pix = st.number_input("💳 Valor em PIX (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_pix)
-st.session_state.valor_dinheiro = st.number_input("💵 Valor em Dinheiro (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_dinheiro)
-st.session_state.valor_cartao = st.number_input("💳 Valor em Cartão (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_cartao)
-st.session_state.valor_pendura = st.number_input("🧾 Valor Pendura (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_pendura)
-st.session_state.valor_total_vendas = st.number_input("💰 Valor Total de Vendas (com 10%) (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_total_vendas)
-st.session_state.numero_clientes = st.number_input("👥 Número de Clientes:", min_value=1, step=1, value=st.session_state.numero_clientes)
+# Campos de entrada com session_state
+st.session_state.valor_pix = st.number_input("💳 Valor em PIX (R$):", min_value=0.0, value=st.session_state.valor_pix, step=0.01)
+st.session_state.valor_dinheiro = st.number_input("💵 Valor em Dinheiro (R$):", min_value=0.0, value=st.session_state.valor_dinheiro, step=0.01)
+st.session_state.valor_cartao = st.number_input("💳 Valor em Cartão (R$):", min_value=0.0, value=st.session_state.valor_cartao, step=0.01)
+st.session_state.valor_pendura = st.number_input("🧾 Valor Pendura (R$):", min_value=0.0, value=st.session_state.valor_pendura, step=0.01)
+st.session_state.valor_total_vendas = st.number_input("💰 Valor Total de Vendas (com 10%) (R$):", min_value=0.0, value=st.session_state.valor_total_vendas, step=0.01)
+st.session_state.numero_clientes = st.number_input("👥 Número de Clientes:", min_value=1, value=st.session_state.numero_clientes, step=1)
 
-# Botão
+# Botão para gerar e enviar planilha
 if st.button("📤 Gerar e Enviar Planilha por E-mail"):
-    pix = st.session_state.valor_pix
-    dinheiro = st.session_state.valor_dinheiro
-    cartao = st.session_state.valor_cartao
-    pendura = st.session_state.valor_pendura
-    total_vendas = st.session_state.valor_total_vendas
-    clientes = st.session_state.numero_clientes
+    # Cálculos
+    entradas = round(
+        st.session_state.valor_pix +
+        st.session_state.valor_dinheiro +
+        st.session_state.valor_cartao +
+        st.session_state.valor_pendura, 2
+    )
+    divergente = "✅ Sem divergência" if entradas == round(st.session_state.valor_total_vendas, 2) else "❌ Divergência detectada"
+    valor_bruto = round(st.session_state.valor_total_vendas / 1.10, 2)
+    ticket_medio = round(st.session_state.valor_total_vendas / st.session_state.numero_clientes, 2)
 
-    entradas = round(pix + dinheiro + cartao + pendura, 2)
-    divergencia = "✅ Sem divergência" if entradas == round(total_vendas, 2) else "❌ Divergência detectada"
-    valor_bruto = round(total_vendas / 1.10, 2)
-    ticket_medio = round(total_vendas / clientes, 2)
-
+    # DataFrame base
     df = pd.DataFrame({
         "Tipo": [
             "Valor PIX", "Valor Dinheiro", "Valor Cartão", "Valor Pendura", "",
@@ -253,62 +258,67 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
             "Número de Clientes", "Ticket Médio", "Verificação"
         ],
         "Valor (R$)": [
-            pix, dinheiro, cartao, pendura, "",
-            total_vendas, valor_bruto,
-            clientes, ticket_medio, divergencia
+            st.session_state.valor_pix,
+            st.session_state.valor_dinheiro,
+            st.session_state.valor_cartao,
+            st.session_state.valor_pendura,
+            "",
+            st.session_state.valor_total_vendas,
+            valor_bruto,
+            st.session_state.numero_clientes,
+            ticket_medio,
+            divergente
         ]
     })
 
-    data_hora = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    nome_arquivo = f"fechamento_caixa_{data_hora}.xlsx"
+    # Nome da planilha
+    nome_arquivo = f"fechamento_caixa_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     df.to_excel(nome_arquivo, index=False)
 
-    # Estilizar planilha com cores
+    # Aplica cores na planilha com openpyxl
     wb = load_workbook(nome_arquivo)
     ws = wb.active
 
-    for row in range(2, 12):
-        tipo = ws[f"A{row}"].value
-        valor = ws[f"B{row}"].value
+    for i, row in enumerate(ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=2), start=1):
+        celula_tipo = row[0].value
+        celula_valor = row[1]
 
-        if tipo == "Verificação":
-            if "❌" in str(valor):
-                ws[f"B{row}"].fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # vermelho
+        if celula_tipo == "Verificação":
+            if divergente.startswith("❌"):
+                celula_valor.fill = PatternFill(start_color="FFC7CE", fill_type="solid")  # vermelho
             else:
-                ws[f"B{row}"].fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # verde
+                celula_valor.fill = PatternFill(start_color="C6EFCE", fill_type="solid")  # verde
 
-        if tipo == "Ticket Médio":
-            if float(valor) < 100:
-                ws[f"B{row}"].fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # vermelho
+        if celula_tipo == "Ticket Médio":
+            if ticket_medio < 100:
+                celula_valor.fill = PatternFill(start_color="FFC7CE", fill_type="solid")
             else:
-                ws[f"B{row}"].fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # verde
+                celula_valor.fill = PatternFill(start_color="C6EFCE", fill_type="solid")
 
     wb.save(nome_arquivo)
 
-    # Enviar e-mail
+    # Envia e-mail com yagmail
     try:
-        yag = yagmail.SMTP(user="ale.moreira@gmail.com", password="gncuqrzzkstgeamn")
+        yag = yagmail.SMTP(user="SEU_EMAIL@gmail.com", password="SENHA_DO_APLICATIVO")
         yag.send(
-            to="ale.moreira@gmail.com",
-            subject=f"📋 Relatório - Fechamento de Caixa {data_hora}",
-            contents="Segue em anexo o relatório de fechamento de caixa.",
+            to="DESTINATARIO@gmail.com",
+            subject="📊 Fechamento de Caixa Villa Sonali",
+            contents="Segue anexo o fechamento de caixa do dia.",
             attachments=nome_arquivo
         )
         st.session_state.email_enviado = True
     except Exception as e:
-        st.error(f"❌ Erro ao enviar e-mail: {e}")
+        st.error(f"❌ Erro ao enviar o e-mail: {e}")
 
-# Confirmação de envio e reinicialização
+# Mostra mensagem de sucesso
 if st.session_state.email_enviado:
-    st.success("📧 E-mail enviado com sucesso!")
-    st.session_state.email_enviado = False
-
-    # Resetar valores
+    st.success("📧 Planilha enviada com sucesso por e-mail!")
+    # Zera os campos após envio
     st.session_state.valor_pix = 0.0
     st.session_state.valor_dinheiro = 0.0
     st.session_state.valor_cartao = 0.0
     st.session_state.valor_pendura = 0.0
     st.session_state.valor_total_vendas = 0.0
     st.session_state.numero_clientes = 1
-
-    st.experimental_rerun()
+    st.session_state.email_enviado = False
+    st.rerun()
