@@ -214,7 +214,7 @@ import yagmail
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 
-# Inicialização dos estados
+# Inicializa os campos da sessão
 if 'valor_pix' not in st.session_state:
     st.session_state.valor_pix = 0.0
     st.session_state.valor_dinheiro = 0.0
@@ -225,7 +225,7 @@ if 'valor_pix' not in st.session_state:
 
 st.title("📦 Fechamento de Caixa - Villa Sonali")
 
-# Entradas com valores persistentes e resetáveis
+# Entradas
 st.session_state.valor_pix = st.number_input("💳 Valor em PIX (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_pix, key="pix")
 st.session_state.valor_dinheiro = st.number_input("💵 Valor em Dinheiro (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_dinheiro, key="dinheiro")
 st.session_state.valor_cartao = st.number_input("💳 Valor em Cartão (R$):", min_value=0.0, step=0.01, value=st.session_state.valor_cartao, key="cartao")
@@ -276,7 +276,7 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     nome_arquivo = f"fechamento_caixa_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     df.to_excel(nome_arquivo, index=False)
 
-    # Formatação do Excel
+    # Formatação condicional
     wb = load_workbook(nome_arquivo)
     ws = wb.active
     fill_verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
@@ -284,7 +284,6 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
 
     ws["B11"].fill = fill_verde if divergente.startswith("✅") else fill_vermelho
     ws["B10"].fill = fill_verde if ticket_medio >= 100 else fill_vermelho
-
     wb.save(nome_arquivo)
 
     try:
@@ -299,10 +298,11 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     except Exception as e:
         st.error(f"❌ Erro ao enviar o e-mail: {e}")
 
-    # Zerar os campos
+    # 🔁 Zera os campos e recarrega o app
     st.session_state.valor_pix = 0.0
     st.session_state.valor_dinheiro = 0.0
     st.session_state.valor_cartao = 0.0
     st.session_state.valor_pendura = 0.0
     st.session_state.valor_total_vendas = 0.0
     st.session_state.numero_clientes = 1
+    st.experimental_rerun()
