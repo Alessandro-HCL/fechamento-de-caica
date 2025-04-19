@@ -221,7 +221,7 @@ if 'valor_pix' not in st.session_state:
     st.session_state.valor_cartao = 0.0
     st.session_state.valor_pendura = 0.0
     st.session_state.valor_total_vendas = 0.0
-    st.session_state.numero_clientes = 0
+    st.session_state.numero_clientes = 1
 
 st.title("📦 Fechamento de Caixa - Villa Sonali")
 
@@ -305,4 +305,4 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     st.session_state.valor_cartao = 0.0
     st.session_state.valor_pendura = 0.0
     st.session_state.valor_total_vendas = 0.0
-    st.session_state.numero_clientes = 0
+    st.session_state.numero_clientes = 1
