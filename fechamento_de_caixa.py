@@ -3,62 +3,49 @@ import pandas as pd
 from datetime import datetime
 import yagmail
 
-st.title("💰 Fechamento de Caixa - Villa Sonali")
+# Inicializa o estado da sessão para armazenar os dados do fechamento
+if 'fechamento' not in st.session_state:
+    st.session_state.fechamento = {}
 
-st.write("### 🧾 Informe os valores do dia:")
+st.title("💳 Fechamento de Caixa - Villa Sonali")
 
-# Entradas do dia
-valor_pix = st.number_input("Valor recebido via Pix (R$)", min_value=0.0, step=0.01)
-valor_dinheiro = st.number_input("Valor recebido em Dinheiro (R$)", min_value=0.0, step=0.01)
-valor_cartao = st.number_input("Valor recebido em Cartão (R$)", min_value=0.0, step=0.01)
-valor_pendura = st.number_input("Valor em Pendura (R$)", min_value=0.0, step=0.01)
+# Entradas do colaborador
+valor_pix = st.number_input("💵 Valor recebido em PIX:", min_value=0.0, step=0.01)
+valor_dinheiro = st.number_input("💵 Valor recebido em Dinheiro:", min_value=0.0, step=0.01)
+valor_cartao = st.number_input("💳 Valor recebido em Cartão:", min_value=0.0, step=0.01)
+valor_pendura = st.number_input("📞 Valor em Pendura:", min_value=0.0, step=0.01)
 
-# Informações complementares
-numero_clientes = st.number_input("Número de clientes atendidos", min_value=0, step=1)
-valor_total_vendas = st.number_input("Valor total das vendas (R$)", min_value=0.0, step=0.01)
+valor_total_vendas = st.number_input("📈 Valor Total de Vendas:", min_value=0.0, step=0.01)
+numero_clientes = st.number_input("👥 Número de Clientes:", min_value=0, step=1)
 
-# Cálculo automático
-valor_total_entradas = valor_pix + valor_dinheiro + valor_cartao + valor_pendura
-
-divergencia = round(valor_total_entradas - valor_total_vendas, 2)
-resultado = "✅ Sem divergência" if divergencia == 0 else f"⚠️ Divergência de R$ {divergencia:.2f}"
-
-# Mostrar resultado
-st.write("---")
-st.subheader("📊 Resumo")
-st.write(f"Total em entradas: R$ {valor_total_entradas:.2f}")
-st.write(f"Valor declarado de vendas: R$ {valor_total_vendas:.2f}")
-st.write(f"Resultado: {resultado}")
-
-# Geração da planilha
-if st.button("📁 Gerar Planilha e Enviar por Email"):
-    data_hora = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    nome_arquivo = f"fechamento_caixa_{data_hora}.xlsx"
-
-    dados = {
-        "Data/Hora": [data_hora],
-        "Valor Pix (R$)": [valor_pix],
+# Botão para gerar planilha e enviar
+if st.button("📅 Gerar Planilha e Enviar por Email"):
+    fechamento_data = {
+        "Data": [datetime.now().strftime("%Y-%m-%d")],
+        "Valor PIX (R$)": [valor_pix],
         "Valor Dinheiro (R$)": [valor_dinheiro],
         "Valor Cartão (R$)": [valor_cartao],
         "Valor Pendura (R$)": [valor_pendura],
-        "Valor Total Entradas (R$)": [valor_total_entradas],
-        "Valor Total Vendas (R$)": [valor_total_vendas],
+        "Total de Entradas (R$)": [valor_pix + valor_dinheiro + valor_cartao + valor_pendura],
+        "Valor Total de Vendas (R$)": [valor_total_vendas],
         "Número de Clientes": [numero_clientes],
-        "Divergência": [divergencia],
-        "Status": [resultado]
+        "Divergência?": ["Sim" if (valor_pix + valor_dinheiro + valor_cartao + valor_pendura) != valor_total_vendas else "Não"]
     }
 
-    df = pd.DataFrame(dados)
-    df.to_excel(nome_arquivo, index=False)
+    df_fechamento = pd.DataFrame(fechamento_data)
+
+    nome_arquivo = f"fechamento_caixa_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+    df_fechamento.to_excel(nome_arquivo, index=False)
 
     try:
         yag = yagmail.SMTP(user="ale.moreira@gmail.com", password="gncuqrzzkstgeamn")
         yag.send(
             to="ale.moreira@gmail.com",
-            subject="📋 Fechamento de Caixa",
-            contents="Segue em anexo o fechamento de caixa do dia.",
+            subject="📋 Fechamento de Caixa - Villa Sonali",
+            contents="Segue em anexo o fechamento de caixa realizado hoje.",
             attachments=nome_arquivo
         )
-        st.success(f"📧 Email enviado com sucesso! Planilha: `{nome_arquivo}`")
+        st.success("Email enviado com sucesso!")
+        st.session_state.fechamento = {}
     except Exception as e:
-        st.error(f"❌ Erro ao enviar e-mail: {e}")
+        st.error(f"Erro ao enviar email: {e}")
