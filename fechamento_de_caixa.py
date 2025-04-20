@@ -115,6 +115,95 @@
 
 
 
+# import streamlit as st
+# import pandas as pd
+# from datetime import datetime
+# import yagmail
+# from openpyxl import load_workbook
+# from openpyxl.styles import PatternFill
+
+# st.title("📦 Fechamento de Caixa - Villa Sonali")
+
+# # Entradas do usuário
+# valor_pix = st.number_input("💳 Valor em PIX (R$):", min_value=0.0, step=0.01)
+# valor_dinheiro = st.number_input("💵 Valor em Dinheiro (R$):", min_value=0.0, step=0.01)
+# valor_cartao = st.number_input("💳 Valor em Cartão (R$):", min_value=0.0, step=0.01)
+# valor_pendura = st.number_input("🧾 Valor Pendura (R$):", min_value=0.0, step=0.01)
+# valor_total_vendas = st.number_input("💰 Valor Total de Vendas (com 10%) (R$):", min_value=0.0, step=0.01)
+# numero_clientes = st.number_input("👥 Número de Clientes:", min_value=1, step=1)
+
+# # Botão para gerar e enviar planilha
+# if st.button("📤 Gerar e Enviar Planilha por E-mail"):
+#     total_entradas = round(valor_pix + valor_dinheiro + valor_cartao + valor_pendura, 2)
+#     divergente = "✅ Sem divergência" if total_entradas == round(valor_total_vendas, 2) else "❌ Divergência detectada"
+#     valor_bruto = round(valor_total_vendas / 1.10, 2)
+#     ticket_medio = round(valor_total_vendas / numero_clientes, 2)
+
+#     df = pd.DataFrame({
+#         "Tipo": [
+#             "Valor PIX",
+#             "Valor Dinheiro",
+#             "Valor Cartão",
+#             "Valor Pendura",
+#             "",
+#             "Valor Total de Vendas (com 10%)",
+#             "Valor de Venda Bruto (sem 10%)",
+#             "Número de Clientes",
+#             "Ticket Médio",
+#             "Verificação"
+#         ],
+#         "Valor (R$)": [
+#             valor_pix,
+#             valor_dinheiro,
+#             valor_cartao,
+#             valor_pendura,
+#             "",
+#             valor_total_vendas,
+#             valor_bruto,
+#             numero_clientes,
+#             ticket_medio,
+#             divergente
+#         ]
+#     })
+
+#     nome_arquivo = f"fechamento_caixa_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+#     df.to_excel(nome_arquivo, index=False)
+
+#     # Formatação condicional no Excel
+#     wb = load_workbook(nome_arquivo)
+#     ws = wb.active
+
+#     # Formatação da verificação (linha 11, coluna 2)
+#     fill_verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # verde
+#     fill_vermelho = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # vermelho
+
+#     if divergente.startswith("✅"):
+#         ws["B11"].fill = fill_verde
+#     else:
+#         ws["B11"].fill = fill_vermelho
+
+#     # Formatação do ticket médio (linha 10, coluna 2)
+#     if ticket_medio >= 100:
+#         ws["B10"].fill = fill_verde
+#     else:
+#         ws["B10"].fill = fill_vermelho
+
+#     wb.save(nome_arquivo)
+
+#     # Envia o e-mail com yagmail
+#     try:
+#         yag = yagmail.SMTP(user="ale.moreira@gmail.com", password="gncuqrzzkstgeamn")
+#         yag.send(
+#             to="ale.moreira@gmail.com",
+#             subject="📋 Relatório - Fechamento de Caixa",
+#             contents="Segue em anexo o fechamento de caixa com os detalhes do dia.",
+#             attachments=nome_arquivo
+#         )
+#         st.success("📧 E-mail enviado com sucesso!")
+#     except Exception as e:
+#         st.error(f"❌ Erro ao enviar o e-mail: {e}")
+
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -129,15 +218,21 @@ valor_pix = st.number_input("💳 Valor em PIX (R$):", min_value=0.0, step=0.01)
 valor_dinheiro = st.number_input("💵 Valor em Dinheiro (R$):", min_value=0.0, step=0.01)
 valor_cartao = st.number_input("💳 Valor em Cartão (R$):", min_value=0.0, step=0.01)
 valor_pendura = st.number_input("🧾 Valor Pendura (R$):", min_value=0.0, step=0.01)
+valor_caixa_inicial = st.number_input("💼 Dinheiro Inicial no Caixa (R$):", min_value=0.0, step=0.01)
 valor_total_vendas = st.number_input("💰 Valor Total de Vendas (com 10%) (R$):", min_value=0.0, step=0.01)
 numero_clientes = st.number_input("👥 Número de Clientes:", min_value=1, step=1)
 
 # Botão para gerar e enviar planilha
 if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     total_entradas = round(valor_pix + valor_dinheiro + valor_cartao + valor_pendura, 2)
-    divergente = "✅ Sem divergência" if total_entradas == round(valor_total_vendas, 2) else "❌ Divergência detectada"
+    divergencia_valor = round(total_entradas - valor_total_vendas, 2)
     valor_bruto = round(valor_total_vendas / 1.10, 2)
     ticket_medio = round(valor_total_vendas / numero_clientes, 2)
+
+    if divergencia_valor == 0:
+        divergente = "✅ Sem divergência"
+    else:
+        divergente = divergencia_valor
 
     df = pd.DataFrame({
         "Tipo": [
@@ -145,18 +240,20 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
             "Valor Dinheiro",
             "Valor Cartão",
             "Valor Pendura",
+            "Dinheiro Inicial no Caixa",
             "",
             "Valor Total de Vendas (com 10%)",
             "Valor de Venda Bruto (sem 10%)",
             "Número de Clientes",
             "Ticket Médio",
-            "Verificação"
+            "Verificação (diferença)"
         ],
         "Valor (R$)": [
             valor_pix,
             valor_dinheiro,
             valor_cartao,
             valor_pendura,
+            valor_caixa_inicial,
             "",
             valor_total_vendas,
             valor_bruto,
@@ -173,14 +270,8 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     wb = load_workbook(nome_arquivo)
     ws = wb.active
 
-    # Formatação da verificação (linha 11, coluna 2)
     fill_verde = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # verde
     fill_vermelho = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # vermelho
-
-    if divergente.startswith("✅"):
-        ws["B11"].fill = fill_verde
-    else:
-        ws["B11"].fill = fill_vermelho
 
     # Formatação do ticket médio (linha 10, coluna 2)
     if ticket_medio >= 100:
@@ -188,9 +279,14 @@ if st.button("📤 Gerar e Enviar Planilha por E-mail"):
     else:
         ws["B10"].fill = fill_vermelho
 
+    # Formatação da divergência (linha 11, coluna 2)
+    if divergente == "✅ Sem divergência":
+        ws["B11"].fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    elif isinstance(divergente, (float, int)):
+        ws["B11"].fill = fill_vermelho if divergente < 0 else fill_verde
+
     wb.save(nome_arquivo)
 
-    # Envia o e-mail com yagmail
     try:
         yag = yagmail.SMTP(user="ale.moreira@gmail.com", password="gncuqrzzkstgeamn")
         yag.send(
